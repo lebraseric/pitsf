@@ -1,0 +1,12 @@
+[Unit]
+Description=PiTSF radio operation
+After=squeezelite.service
+ 
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/pitsf
+ExecStart=/usr/bin/python3 -u /usr/local/bin/pitsf.py
+Restart=on-abort
+ 
+[Install]
+WantedBy=multi-user.target
