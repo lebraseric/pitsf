@@ -1,6 +1,6 @@
 [Unit]
 Description=PiTSF radio operation
-After=squeezelite.service
+After=squeezelite.service network.target
  
 [Service]
 Type=simple

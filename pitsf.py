@@ -30,7 +30,18 @@ select2 = Button(12)                #                              (output 2)
 select3 = Button(26)                #                              (output 3)
 
 my_server = LmsServer(getenv("SB_SERVER", "127.0.0.1:9000"))
+print("Connected to SB server " + my_server.URL)
 my_player_id = getenv("SB_PLAYER_ID", get_mac_address())
+print("Player Id is " + my_player_id)
+my_server.cls_player_on_off(my_player_id, 0)
+print("Player " + my_player_id + " is off")
+
+def player_on():
+    my_server.cls_player_on_off(my_player_id, 1)
+    player_status = my_server.cls_player_status(my_player_id)
+    if player_status['mode'] == "stop":
+        if player_status['playlist_tracks'] >= 1:
+            my_server.cls_player_play(my_player_id)
 
 power_prev_state = 0
 while True:
@@ -38,11 +49,13 @@ while True:
     if power_state != power_prev_state:
         power_prev_state = power_state
         if power_state == 0:        # Switch off
+            print("Switch off detected")
             led.off()
             amp.off()
             my_server.cls_player_on_off(my_player_id, 0)
         else:                       # Switch on
+            print("Switch on detected")
             led.on()
             amp.on()
-            my_server.cls_player_on_off(my_player_id, 1)
+            player_on()
     sleep(0.2)
