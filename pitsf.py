@@ -29,7 +29,7 @@ select1 = Button(25)                # Connected to a rotary switch (output 1)
 select2 = Button(12)                #                              (output 2)
 select3 = Button(26)                #                              (output 3)
 
-my_server = LmsServer(getenv("SB_SERVER", "127.0.0.1:9000"))
+my_server = LmsServer(getenv("SB_SERVER", "192.168.1.94:9000"))
 print("Connected to SB server " + my_server.URL)
 my_player_id = getenv("SB_PLAYER_ID", get_mac_address())
 print("Player Id is " + my_player_id)
@@ -41,6 +41,7 @@ def player_on():
     player_status = my_server.cls_player_status(my_player_id)
     if player_status['mode'] == "stop":
         if player_status['playlist_tracks'] >= 1:
+            my_server.cls_player_stop(my_player_id)
             my_server.cls_player_play(my_player_id)
 
 power_prev_state = 0
