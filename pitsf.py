@@ -22,41 +22,57 @@ from gpiozero import LED
 from gpiozero import Button
 from lmsmanager import LmsServer
 
-led = LED(6)                        # Enlightens the radio dial
-amp = LED(16)                       # The relay that operates the class-D amp
-power = Button(5)                   # An on-off switch
-select1 = Button(25)                # Connected to a rotary switch (output 1)
-select2 = Button(12)                #                              (output 2)
-select3 = Button(26)                #                              (output 3)
+class radio:
+    def __init__(self, my_server_ip, my_radio_id):
+        self.led = LED(6)                   # Enlightens the radio dial
+        self.amp = LED(16)                  # The relay that operates the class-D amp
+        self.power = Button(5)              # On-off switch
+        self.select1 = Button(25)           # Connected to a rotary switch (output 1)
+        self.select2 = Button(12)           #                              (output 2)
+        self.select3 = Button(26)           #                              (output 3)
+        self.server = LmsServer(my_server_ip)
+        self.connected = False
+        print('Searching for playerid=' + my_radio_id)
+        players = self.server.cls_players_list()
+        for self.player in players:
+            if self.player["playerid"] == my_radio_id:
+                self.server.cls_player_on_off(self.player["playerid"], 0)
+                print("Player " + self.player["playerid"] + " turned off")
+                self.connected = True
+                break
 
-my_server = LmsServer(getenv("SB_SERVER", "192.168.1.94:9000"))
-print("Connected to SB server " + my_server.URL)
-my_player_id = getenv("SB_PLAYER_ID", get_mac_address())
-print("Player Id is " + my_player_id)
-my_server.cls_player_on_off(my_player_id, 0)
-print("Player " + my_player_id + " is off")
+    def on(self):
+        self.led.on()
+        self.amp.on()
+        self.server.cls_player_on_off(self.player["playerid"], 1)
+        player_status = self.server.cls_player_status(self.player["playerid"])
+        if player_status['mode'] != "play":
+            if player_status['playlist_tracks'] >= 1:
+                self.server.cls_player_stop(self.player["playerid"])
+                self.server.cls_player_play(self.player["playerid"])
 
-def player_on():
-    my_server.cls_player_on_off(my_player_id, 1)
-    player_status = my_server.cls_player_status(my_player_id)
-    if player_status['mode'] == "stop":
-        if player_status['playlist_tracks'] >= 1:
-            my_server.cls_player_stop(my_player_id)
-            my_server.cls_player_play(my_player_id)
+    def off(self):
+        self.server.cls_player_on_off(self.player["playerid"], 0)
+        self.amp.off()
+        self.led.off()
 
-power_prev_state = 0
-while True:
-    power_state = power.is_pressed
-    if power_state != power_prev_state:
-        power_prev_state = power_state
-        if power_state == 0:        # Switch off
-            print("Switch off detected")
-            led.off()
-            amp.off()
-            my_server.cls_player_on_off(my_player_id, 0)
-        else:                       # Switch on
-            print("Switch on detected")
-            led.on()
-            amp.on()
-            player_on()
-    sleep(0.2)
+    def error(self):
+        self.led.blink(background=False)
+
+my_radio = radio(getenv("SB_SERVER", "192.168.1.94:9000"), getenv("SB_PLAYER_ID", get_mac_address()))
+if my_radio.connected:
+    power_prev_state = 0
+    while True:
+        power_state = my_radio.power.is_pressed
+        if power_state != power_prev_state:
+            power_prev_state = power_state
+            if power_state == 0:        # Switch off
+                print("Switch off detected")
+                my_radio.off()
+            else:                       # Switch on
+                print("Switch on detected")
+                my_radio.on()
+        sleep(0.2)
+else:
+    print('Error: Radio initialization failed')
+    my_radio.error()
