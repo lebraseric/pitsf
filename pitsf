@@ -2,7 +2,7 @@
 # Install as /etc/default/pitsf
 
 # Squeezebox server (Logitech Media Server):
-SB_SERVER="rpi4:9000"
+SB_SERVER="127.0.0.1:9000"
 
 # Squeezebox player Id:
 #SB_PLAYER_ID=xx:xx:xx:xx:xx:xx
