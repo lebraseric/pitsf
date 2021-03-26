@@ -19,9 +19,9 @@ Environment variables:
 __version__ = '0.1.1'
 __author__ = 'Eric Le Bras'
 
-from os import getenv
 from sys import exit
 from time import sleep
+from os import getenv
 from getmac import get_mac_address
 from gpiozero import LED
 from gpiozero import Button
@@ -31,7 +31,7 @@ from lmsmanager import LmsServer
 class Radio:
 
     def on(self) -> None:
-        """Powering on callback method"""
+        """Powering-on callback method"""
         self.led.on()
         self.amp.on()       # Closes the relay powering the amp
         # Power-on the player
@@ -49,7 +49,7 @@ class Radio:
                 self.server.cls_player_play(self.player['playerid'])
 
     def off(self) -> None:
-        """Powering off callback method"""
+        """Powering-off callback method"""
         # Power-off the player
         self.server.cls_player_on_off(self.player['playerid'], 0)
         self.amp.off()      # Opens the relay powering the amp
@@ -101,6 +101,7 @@ class Radio:
             self.error()
 
 
-# Create Radio instance and enter forever loop
-my_radio = Radio(getenv('SB_SERVER', '192.168.1.94:9000'),
-                 getenv('SB_PLAYER_ID', get_mac_address()))
+if __name__ == '__main__':
+    # Create Radio instance and enter forever loop
+    my_radio = Radio(getenv('SB_SERVER', '192.168.1.94:9000'),
+                     getenv('SB_PLAYER_ID', get_mac_address()))
