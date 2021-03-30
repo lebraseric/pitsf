@@ -14,9 +14,10 @@ Environment variables:
 2021-03-20 : V0.1   Turning the radio on/off works.
 2021-03-26 : V0.1.1 General oo overhaul, added Radio class.
                     Initialization bugs fixed.
+2021-03-30 : V0.2   Added rotary switch management
 """
 
-__version__ = '0.1.1'
+__version__ = '0.2'
 __author__ = 'Eric Le Bras'
 
 from sys import exit
@@ -30,16 +31,12 @@ from lmsmanager import LmsServer
 
 class Radio:
 
-    def on(self) -> None:
-        """Powering-on callback method"""
-        self.led.on()
-        self.amp.on()       # Closes the relay powering the amp
-        # Power-on the player
-        self.server.cls_player_on_off(self.player['playerid'], 1)
-        # Clear playlist and load the preset
+    def start_playlist(self, preset) -> None:
+        """Load and start preset"""
         self.server.cls_player_playlist_clear(self.player['playerid'])
-        self.server.cls_player_playlist_add(self.player['playerid'],
-                                            'pitsf_preset1')
+        self.server.cls_player_playlist_add(
+            self.player['playerid'],
+            'pitsf_preset' + str(preset))
         # Get player status
         player_status = self.server.cls_player_status(self.player['playerid'])
         if player_status['mode'] != 'play':
@@ -47,6 +44,14 @@ class Radio:
                 # Play works only if preceded by stop
                 self.server.cls_player_stop(self.player['playerid'])
                 self.server.cls_player_play(self.player['playerid'])
+
+    def on(self, preset: int) -> None:
+        """Powering-on callback method"""
+        self.led.on()
+        self.amp.on()       # Closes the relay powering the amp
+        # Power-on the player
+        self.server.cls_player_on_off(self.player['playerid'], 1)
+        self.start_playlist(preset)
 
     def off(self) -> None:
         """Powering-off callback method"""
@@ -59,6 +64,16 @@ class Radio:
         """Visualy indicate an error (never ending method)"""
         self.led.blink(background=False)
 
+    def radio_switch_pos(self) -> int:
+        """Decodes and returns rotary switch position"""
+        val = (self.select1.value
+               + self.select2.value*2
+               + self.select3.value*4)
+        if val in self.rs:
+            return self.rs[val]
+        else:
+            return 0
+    
     def __init__(self, my_server_ip: str, my_player_id: str):
         """Radio initialization sequence
         This is normally called at system startup, when the radio is
@@ -73,6 +88,7 @@ class Radio:
         self.select1 = Button(25)     # Connected to a rotary switch (output 1)
         self.select2 = Button(12)     #                              (output 2)
         self.select3 = Button(26)     #                              (output 3)
+        self.rs = {0: 1, 4: 2, 6: 3, 3: 4}  # Rotary switch decoding
         self.server = LmsServer(my_server_ip)
         self.connected = False
         print('Searching for playerid=' + my_player_id)
@@ -84,17 +100,23 @@ class Radio:
                 self.connected = True
                 break
         if self.connected:
-            power_prev_state = 0
+            power_on_prev = 0
+            rs_pos_prev = 0
             while True:
-                power_state = self.power.is_pressed
-                if power_state != power_prev_state:
-                    power_prev_state = power_state
-                    if power_state == 0:        # Power switch off
+                power_on = self.power.is_pressed
+                rs_pos = self.radio_switch_pos()
+                if power_on != power_on_prev:
+                    if not power_on:        # Power switch off
                         print('Switch off detected')
                         self.off()
                     else:                       # Power switch on
                         print('Switch on detected')
-                        self.on()
+                        self.on(rs_pos)
+                        rs_pos_prev = rs_pos
+                    power_on_prev = power_on
+                if power_on and rs_pos != rs_pos_prev:
+                    self.start_playlist(rs_pos)
+                    rs_pos_prev = rs_pos
                 sleep(0.2)
         else:
             print('Error: Radio initialization failed')
